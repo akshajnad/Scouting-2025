@@ -6,7 +6,7 @@
    - Free-form interactive field: stores (x,y) coordinates then converts them into a grid cell number (12x6) for output
    - Auto-fills team number based on match number, match type, and robot selection
    - Reset form automatically increments match number
-   - Builds output data as short-code key=value; string (including Coral L4 fields)
+   - Builds output data as a short-code key=value; string with some values shortened
 ------------------------------------------------------ */
 
 /* ===== TBA Interface Functions ===== */
@@ -193,6 +193,7 @@ function autoFillTeamNumber() {
 
 /* ===== Build Short-Code Data String ===== */
 function getFormDataString() {
+  // Define the mapping array without the yellow card ("yc") and DEP fields.
   const fieldsMap = [
     { code: 'si', id: 'scouterInitials' },
     { code: 'mn', id: 'matchNumber' },
@@ -204,7 +205,6 @@ function getFormDataString() {
     { code: 'cp', id: 'cagePosition' },
     
     { code: 'ma', id: 'movedAuto' },
-    // Removed time fields
     { code: 'c1a', id: 'coralL1Auto' },
     { code: 'c2a', id: 'coralL2Auto' },
     { code: 'c3a', id: 'coralL3Auto' },
@@ -226,14 +226,13 @@ function getFormDataString() {
     { code: 'cf', id: 'crossedField' },
     { code: 'tfell', id: 'tippedFell' },
     { code: 'toc', id: 'touchedOpposingCage' },
-    // Removed DEP field
     
     { code: 'ep', id: 'endPosition' },
     { code: 'def', id: 'defended' },
-    // Removed trh field
+    
     { code: 'ofs', id: 'offenseSkill' },
     { code: 'dfs', id: 'defenseSkill' },
-    { code: 'yc', id: 'yellowCard' },
+    // Removed yellow card field
     { code: 'cs', id: 'cardStatus' },
     { code: 'cm', id: 'comments' }
   ];
@@ -245,6 +244,8 @@ function getFormDataString() {
     if (!el) {
       val = '';
     } else if (fm.id === "startingPosition") {
+      // Convert free selection coordinate (stored as JSON array "x,y")
+      // into a grid cell number using a default 12x6 resolution based on the image dimensions.
       try {
         let coordsArr = JSON.parse(el.value);
         if (coordsArr.length > 0) {
@@ -263,6 +264,13 @@ function getFormDataString() {
       val = el.checked ? 'true' : 'false';
     } else {
       val = el.value;
+      // Shorten specific values
+      if (fm.id === "cagePosition" && val.toLowerCase() === "shallow") {
+        val = "sh";
+      }
+      if (fm.id === "endPosition" && val === "Parked") {
+        val = "p";
+      }
     }
     result += `${fm.code}=${val};`;
   });
