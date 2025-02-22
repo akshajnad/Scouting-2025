@@ -1,12 +1,19 @@
 /* ------------------------------------------------------
    script.js
    Integrated functionality:
-   - EVENT_CODE is defined (set to "2024cthar")
+   - EVENT_CODE is set (here "2024cthar")
    - Pulls team and match data from TBA using the provided API key
-   - Free-form interactive field: stores (x,y) coordinates then converts them into a grid cell number (12x6) for output
-   - Auto-fills team number based on match number, match type, and robot selection
-   - Reset form automatically increments match number
-   - Builds output data as a short-code key=value; string with transformed values
+   - Free-form interactive field: stores (x,y) coordinate then converts it into a grid cell number (12x6) for output
+   - Auto-fills team number based on match number, match type, and robot
+   - Reset form auto-increments match number
+   - Builds QR code data as short-code key=value; string with the following transformations:
+       • robotNumber: "Red 1" → "r1", "Blue 2" → "b2", etc.
+       • pickupLocation: "None" → "n", "Ground" → "g", "Human Player" → "hp", "Both" → "b"
+       • cagePosition: "Shallow" → "s", "Deep" → "d"
+       • matchType: "qm" → "q", "qf" → "p", "f" → "f"
+       • Checkbox fields: true → "t", false → "f"
+       • endPosition: "Not Parked" → "np", "Parked" → "p", "Shallow Climb" → "sc", "Deep Climb" → "dc", "Failed Climb" → "fc"
+       • cardStatus: "No Card" → "nc", "Yellow Card" → "yc", "Red Card" → "rc"
 ------------------------------------------------------ */
 
 /* ===== TBA Interface Functions ===== */
@@ -58,6 +65,7 @@ function formatTime(ms) {
          String(seconds).padStart(2, '0') + '.' + fraction;
 }
 function updateTimerDisplay() {
+  // (Timer display element might not be present)
   document.getElementById('timeToScoreCoralDisplay') && (document.getElementById('timeToScoreCoralDisplay').textContent = formatTime(elapsedTime));
 }
 function startStopTimer() {
@@ -149,10 +157,11 @@ function getRobot() {
 function getCurrentMatchKey() {
   const matchType = document.getElementById("matchType").value;
   const matchNumber = document.getElementById("matchNumber").value;
-  // Transform matchType: "qm" -> "q", "qf" -> "p", "f" remains "f"
+  // Transform matchType: "qm" -> "q", "qf" -> "p", "f" -> "f"
   let mt = matchType;
   if (mt === "qm") mt = "q";
   else if (mt === "qf") mt = "p";
+  else if (mt === "f") mt = "f";
   return EVENT_CODE + "_" + mt + matchNumber;
 }
 function getMatch(matchKey) {
@@ -197,7 +206,7 @@ function autoFillTeamNumber() {
 
 /* ===== Build Short-Code Data String ===== */
 function getFormDataString() {
-  // Mapping array; note: yellow card ("yc") and DEP fields have been removed.
+  // Define the mapping array (yellow card and DEP fields removed)
   const fieldsMap = [
     { code: 'si', id: 'scouterInitials' },
     { code: 'mn', id: 'matchNumber' },
@@ -247,7 +256,7 @@ function getFormDataString() {
     if (!el) {
       val = '';
     } else if (fm.id === "startingPosition") {
-      // Convert free selection coordinate (stored as JSON array "x,y")
+      // Convert free selection coordinate (JSON array "x,y")
       // into a grid cell number using a default 12x6 resolution based on the image dimensions.
       try {
         let coordsArr = JSON.parse(el.value);
@@ -269,7 +278,7 @@ function getFormDataString() {
       val = el.value;
       // Transform specific values:
       if (fm.id === "robotNumber") {
-        // "Red 1" => "r1", "Blue 2" => "b2", etc.
+        // Transform "Red 1" to "r1", "Blue 2" to "b2", etc.
         val = val.toLowerCase().replace("red ", "r").replace("blue ", "b");
       }
       if (fm.id === "pickupLocation") {
