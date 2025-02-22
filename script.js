@@ -6,7 +6,7 @@
    - Free-form interactive field: stores (x,y) coordinates then converts them into a grid cell number (12x6) for output
    - Auto-fills team number based on match number, match type, and robot selection
    - Reset form automatically increments match number
-   - Builds output data as a short-code key=value; string with some values shortened
+   - Builds output data as a short-code key=value; string with transformed values
 ------------------------------------------------------ */
 
 /* ===== TBA Interface Functions ===== */
@@ -149,7 +149,11 @@ function getRobot() {
 function getCurrentMatchKey() {
   const matchType = document.getElementById("matchType").value;
   const matchNumber = document.getElementById("matchNumber").value;
-  return EVENT_CODE + "_" + matchType + matchNumber;
+  // Transform matchType: "qm" -> "q", "qf" -> "p", "f" remains "f"
+  let mt = matchType;
+  if (mt === "qm") mt = "q";
+  else if (mt === "qf") mt = "p";
+  return EVENT_CODE + "_" + mt + matchNumber;
 }
 function getMatch(matchKey) {
   if (schedule) {
@@ -193,7 +197,7 @@ function autoFillTeamNumber() {
 
 /* ===== Build Short-Code Data String ===== */
 function getFormDataString() {
-  // Define the mapping array without the yellow card ("yc") and DEP fields.
+  // Mapping array; note: yellow card ("yc") and DEP fields have been removed.
   const fieldsMap = [
     { code: 'si', id: 'scouterInitials' },
     { code: 'mn', id: 'matchNumber' },
@@ -232,7 +236,6 @@ function getFormDataString() {
     
     { code: 'ofs', id: 'offenseSkill' },
     { code: 'dfs', id: 'defenseSkill' },
-    // Removed yellow card field
     { code: 'cs', id: 'cardStatus' },
     { code: 'cm', id: 'comments' }
   ];
@@ -261,15 +264,45 @@ function getFormDataString() {
         val = "";
       }
     } else if (el.type === 'checkbox') {
-      val = el.checked ? 'true' : 'false';
+      val = el.checked ? 't' : 'f';
     } else {
       val = el.value;
-      // Shorten specific values
-      if (fm.id === "cagePosition" && val.toLowerCase() === "shallow") {
-        val = "sh";
+      // Transform specific values:
+      if (fm.id === "robotNumber") {
+        // "Red 1" => "r1", "Blue 2" => "b2", etc.
+        val = val.toLowerCase().replace("red ", "r").replace("blue ", "b");
       }
-      if (fm.id === "endPosition" && val === "Parked") {
-        val = "p";
+      if (fm.id === "pickupLocation") {
+        // Transform: None->n, Ground->g, Human Player->hp, Both->b.
+        if (val.toLowerCase() === "none") val = "n";
+        else if (val.toLowerCase() === "ground") val = "g";
+        else if (val.toLowerCase() === "human player") val = "hp";
+        else if (val.toLowerCase() === "both") val = "b";
+      }
+      if (fm.id === "cagePosition") {
+        // Transform: Shallow->s, Deep->d.
+        if (val.toLowerCase() === "shallow") val = "s";
+        else if (val.toLowerCase() === "deep") val = "d";
+      }
+      if (fm.id === "matchType") {
+        // Transform: "qm" -> "q", "qf" -> "p", "f" -> "f"
+        if (val === "qm") val = "q";
+        else if (val === "qf") val = "p";
+        else if (val === "f") val = "f";
+      }
+      if (fm.id === "endPosition") {
+        // Transform: Not Parked->np, Parked->p, Shallow Climb->sc, Deep Climb->dc, Failed Climb->fc.
+        if (val === "Not Parked") val = "np";
+        else if (val === "Parked") val = "p";
+        else if (val === "Shallow Climb") val = "sc";
+        else if (val === "Deep Climb") val = "dc";
+        else if (val === "Failed Climb") val = "fc";
+      }
+      if (fm.id === "cardStatus") {
+        // Transform: No Card->nc, Yellow Card->yc, Red Card->rc.
+        if (val === "No Card") val = "nc";
+        else if (val === "Yellow Card") val = "yc";
+        else if (val === "Red Card") val = "rc";
       }
     }
     result += `${fm.code}=${val};`;
